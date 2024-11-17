@@ -1,0 +1,9 @@
+[package]
+name = "analytics-system"
+version = "0.1.0"
+edition = "2021"
+default-run = "analytics-system"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = "0.7.9"
