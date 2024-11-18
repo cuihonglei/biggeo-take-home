@@ -1,51 +1,30 @@
-use std::io;
+use super::config::{self, Config};
+use super::db;
+use super::server;
 
-// TODO Best practice for sibling modules?
-#[path = "config.rs"]
-mod config;
-use config::Config;
-
-// TODO Best practice for sibling modules?
-#[path = "db.rs"]
-mod db;
-use db::DB;
-
-// TODO Best practice for sibling modules?
-#[path = "server.rs"]
-mod server;
-use server::Server;
+use std::sync::Arc;
 
 pub struct App {
     // The Global config
-    config: Config,
+    pub config: Config,
 
-    // The API server
-    server: Server,
-
-    // The DB manager
-    db: DB,
+    // The DB manager's transmitter
+    pub db: db::DBTx,
 }
 
-impl App {
-    pub fn new() -> App {
-        App {
-            config: Config::new(),
-            server: Server::new(),
-            db: DB::new(),
-        }
-    }
+impl App {}
 
-    pub async fn run(&mut self, addrs: &[String]) -> io::Result<()> {
+pub async fn run(addrs: &[String]) -> Result<Arc<App>, std::io::Error> {
+    // TODO Load config.
+    let config = config::load();
 
-        // Load config from file.
-        self.config.load("");
+    // Run the DB manager and get the transmitter.
+    let db = db::run(addrs).await?;
 
-        // Connect to DB nodes.
-        self.db.run(addrs).await?;
+    let app = Arc::new(App { config, db });
 
-        // Start the API server.
-        self.server.run().await;
+    // Start the API server.
+    server::run(app.clone()).await;
 
-        Ok(())
-    }
+    Ok(app)
 }

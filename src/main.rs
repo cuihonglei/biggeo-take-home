@@ -1,11 +1,13 @@
-use std::env;
-use tokio::io;
-
 mod app;
-use app::App;
+mod config;
+mod db;
+mod node;
+mod server;
+
+use std::env;
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() {
     println!("API server!");
 
     // Get command line arguments
@@ -18,7 +20,7 @@ async fn main() -> io::Result<()> {
     // Read the addresses from the command-line arguments
     let addrs = &args[1..];
 
-    App::new().run(addrs).await?;
+    let _ = app::run(addrs).await;
 
-    Ok(())
+    // TODO Create a channel to wait for app to exit.
 }
