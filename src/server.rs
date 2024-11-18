@@ -13,11 +13,10 @@ pub async fn run(app: Arc<App>) {
         .route("/get-average", get(get_average))
         .with_state(app);
 
-    // TODO Use spawn
-    //tokio::spawn(async {
-    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, axum_app).await.unwrap();
-    //});
+    tokio::spawn(async {
+        let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        axum::serve(listener, axum_app).await.unwrap();
+    });
 }
 
 async fn insert(State(app): State<Arc<App>>) -> &'static str {
