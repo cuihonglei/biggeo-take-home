@@ -21,20 +21,22 @@ pub async fn run(app: Arc<App>) {
 
 async fn insert(State(app): State<Arc<App>>) -> &'static str {
     // TODO Decode the binary records.
-    // TODO Hash to find the node.
-    // TODO Insert records accordingly.
+    // TODO Validate the input data.
 
+    // TODO Call DB manger to insert data into databases.
     db::insert(&app.db, "test_key".to_string()).await;
 
+    // TODO Return
     "insert"
 }
 
 async fn get_average(State(app): State<Arc<App>>) -> &'static str {
     // TODO Decode the binary records.
-    // TODO Hash to find the node.
-    // TODO Analyse records accordingly.
-
+    // TODO Validate the input data.
+     
+    // TODO Call DB manger to search data frome databases.
     db::get_average(&app.db,"test_key".to_string()).await;
 
+    // TODO Return
     "get-average"
 }
