@@ -1,10 +1,19 @@
-use duckdb::{params, Connection, Result};
+mod node_capnp {
+    include!(concat!(env!("OUT_DIR"), "/schema/node_capnp.rs"));
+}
+mod server;
+
 use std::env;
-use tokio::io;
-use tokio::net::TcpListener;
+use tokio_util::compat::TokioAsyncReadCompatExt;
+use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
+use duckdb::{Connection, Result};
+
+use crate::node_capnp::node;
+use server::NodeImpl;
+
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get the address and database path from the command-line arguments
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
@@ -12,30 +21,42 @@ async fn main() -> io::Result<()> {
         std::process::exit(1);
     }
 
-    let address = &args[1];
+    
+    let addr = &args[1];
     let db_path = &args[2];
 
-    println!("DB node listening on {}", address);
+    println!("DB node listening on {}", addr);
     println!("Using database at {}", db_path);
 
-    // DuckDB - Pass the db_path from command line
+    // TODO Testing DuckDB - Pass the db_path from command line
     let _ = duckdb(db_path);
 
-    // API
-    let listener = TcpListener::bind(address).await?;
+    let local = tokio::task::LocalSet::new();
+    local.run_until(async move {
+        let listener = tokio::net::TcpListener::bind(&addr).await?;
+        let node_client: node::Client = capnp_rpc::new_client(NodeImpl);
 
-    loop {
-        let (mut socket, _) = listener.accept().await?;
+        loop {
+            let (stream, _) = listener.accept().await?;
+            stream.set_nodelay(true)?;
 
-        tokio::spawn(async move {
-            let (mut rd, mut wr) = socket.split();
+            let compat_stream = TokioAsyncReadCompatExt::compat(stream);
 
-            // TODO Handle the DB operations: insert, analyse
-            if io::copy(&mut rd, &mut wr).await.is_err() {
-                eprintln!("failed to copy");
-            }
-        });
-    }
+            let (reader, writer) = futures::io::AsyncReadExt::split(compat_stream);
+
+            let network = twoparty::VatNetwork::new(
+                futures::io::BufReader::new(reader),
+                futures::io::BufWriter::new(writer),
+                rpc_twoparty_capnp::Side::Server,
+                Default::default(),
+            );
+
+            let rpc_system =
+                RpcSystem::new(Box::new(network), Some(node_client.clone().client));
+
+            tokio::task::spawn_local(rpc_system);
+        }
+    }).await
 }
 
 fn duckdb(db_path: &str) -> Result<()> {
@@ -64,6 +85,7 @@ fn duckdb(db_path: &str) -> Result<()> {
         return Err(e);
     }
 
+    /*
     // Create a `Person` object
     let me = Person {
         id: 1, // Can be auto-generated or manually set
@@ -79,6 +101,7 @@ fn duckdb(db_path: &str) -> Result<()> {
         eprintln!("Error inserting person: {}", e);
         return Err(e);
     }
+     */
 
     // Prepare the SELECT statement to fetch the data
     let mut stmt = match conn.prepare("SELECT id, name, data FROM person") {
