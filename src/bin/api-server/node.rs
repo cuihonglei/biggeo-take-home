@@ -25,7 +25,7 @@ struct Node {
     //client: node::Client,
 }
 
-pub async fn run(addr: String) -> Result<mpsc::Sender<Command>, Box<dyn std::error::Error>> {
+pub async fn run(addr: String) -> Result<NodeTx, Box<dyn std::error::Error>> {
     println!("node::run {}", addr);
 
     let addr1 = addr.clone();

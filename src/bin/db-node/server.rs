@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use capnp::capability::Promise;
 use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 use crate::node_capnp::node;
+use super::app::App;
 
 pub struct NodeImpl;
 
@@ -31,7 +34,7 @@ impl node::Server for NodeImpl {
     }
 }
 
-pub async fn run(addr: &String) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run(app: Arc<App>, addr: &String) -> Result<(), Box<dyn std::error::Error>> {
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async move {

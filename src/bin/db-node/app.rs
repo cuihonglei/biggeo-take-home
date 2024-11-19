@@ -9,6 +9,9 @@ use tokio::sync::oneshot;
 pub struct App {
     // The Global config
     pub config: Config,
+
+    // The DB object
+    pub db: db::DB,
 }
 
 impl App {
@@ -32,17 +35,22 @@ pub async fn run(tx: oneshot::Sender<i8>, addr: &String, db_path: &String) {
     // Load config.
     let config: Config = config::load();
 
-    // TODO Open duckdb.
-    // TODO Testing DuckDB - Pass the db_path from command line
-    let _ = db::duckdb(db_path);
+    // Open DuckDB and create the `DB` object.
+    let db = match db::run(db_path) {
+        Ok(db) => db,
+        Err(err) => {
+            eprintln!("Error initializing the database: {}", err);
+            return;
+        }
+    };
 
     // Create the app object.
-    let app = Arc::new(App { config });
+    let app: Arc<App> = Arc::new(App { config, db });
 
     // Start the RPC server.
     // Assuming that server::run doesn't return an error, you could log any issues inside it.
     // TODO Check return.
-    let _ = server::run(addr).await;
+    let _ = server::run(app.clone(), addr).await;
 
     // Check kill signals to exit safely.
     app.check_signal(tx);
