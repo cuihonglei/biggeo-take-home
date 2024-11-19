@@ -139,7 +139,7 @@ async fn on_insert(db: &DB, key: String) {
         .send(node::Command::Insert { key, resp: resp_tx })
         .await;
 
-    // Handle the response
+    //  TODO Handle the response
     match resp_rx.await {
         Ok(response) => {
             println!("Insert response: {}", response);
@@ -172,7 +172,7 @@ async fn on_get_average(db: &DB, key: String) {
         results.push(rx);
     }
 
-    // Collect the results (await the receivers)
+    // TODO Collect the results (await the receivers)
     for rx in results {
         match rx.await {
             Ok(result) => {
