@@ -24,7 +24,7 @@ async fn insert(State(app): State<Arc<App>>) -> &'static str {
     // TODO Hash to find the node.
     // TODO Insert records accordingly.
 
-    db::insert(&app.db).await;
+    db::insert(&app.db, "test_key".to_string()).await;
 
     "insert"
 }
@@ -34,7 +34,7 @@ async fn get_average(State(app): State<Arc<App>>) -> &'static str {
     // TODO Hash to find the node.
     // TODO Analyse records accordingly.
 
-    db::get_average(&app.db).await;
+    db::get_average(&app.db,"test_key".to_string()).await;
 
     "get-average"
 }

@@ -11,7 +11,7 @@ pub struct App {
     pub config: Config,
 
     // The DB manager's transmitter
-    pub db: db::DBTx,
+    pub db: db::DB,
 }
 
 impl App {

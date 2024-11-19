@@ -1,19 +1,6 @@
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 
 use super::node;
-
-pub enum Command {
-    Insert {
-        key: String,
-        resp: oneshot::Sender<String>,
-    },
-    GetAverage {
-        key: String,
-        resp: oneshot::Sender<String>,
-    },
-}
-
-pub type DBTx = mpsc::Sender<Command>;
 
 // The DB manager, manage db connections.
 pub struct DB {
@@ -21,57 +8,7 @@ pub struct DB {
     nodes: Vec<node::NodeTx>,
 }
 
-pub async fn insert(db: &DBTx) {
-    // TODO Testing
-
-    // Create a oneshot channel for the response
-    let (resp_tx, resp_rx) = oneshot::channel();
-
-    // Create a Command::Insert with a test key and response sender
-    let command = Command::Insert {
-        key: "test_key".to_string(),
-        resp: resp_tx,
-    };
-
-    // Send the command to the DB
-    if let Err(e) = db.send(command).await {
-        eprintln!("Failed to send command to DB: {}", e);
-        return;
-    }
-
-    // Wait for the response
-    match resp_rx.await {
-        Ok(response) => println!("Received response from DB: {}", response),
-        Err(e) => eprintln!("Failed to receive response from DB: {}", e),
-    }
-}
-
-pub async fn get_average(db: &DBTx) {
-    // TODO Testing
-
-    // Create a oneshot channel for the response
-    let (resp_tx, resp_rx) = oneshot::channel();
-
-    // Create a Command::Insert with a test key and response sender
-    let command = Command::GetAverage {
-        key: "test_key".to_string(),
-        resp: resp_tx,
-    };
-
-    // Send the command to the DB
-    if let Err(e) = db.send(command).await {
-        eprintln!("Failed to send command to DB: {}", e);
-        return;
-    }
-
-    // Wait for the response
-    match resp_rx.await {
-        Ok(response) => println!("Received response from DB: {}", response),
-        Err(e) => eprintln!("Failed to receive response from DB: {}", e),
-    }
-}
-
-pub async fn run(addrs: &[String]) -> Result<DBTx, std::io::Error> {
+pub async fn run(addrs: &[String]) -> Result<DB, std::io::Error> {
     let mut db = DB { nodes: Vec::new() };
 
     // Establishe connections to the DB nodes
@@ -90,42 +27,10 @@ pub async fn run(addrs: &[String]) -> Result<DBTx, std::io::Error> {
         }
     }
 
-    // Create a channel that will be used by the task to listen to commands
-    let (tx, mut rx) = mpsc::channel(32);
-
-    // Spawn a task to handle messages from outside the DB
-    tokio::spawn(async move {
-        // This task listens for commands and processes them
-        while let Some(cmd) = rx.recv().await {
-            use Command::*;
-
-            match cmd {
-                Insert { key, resp } => {
-                    // Handle Insert command
-                    println!("Insert received for key: {}", key);
-
-                    on_insert(&db, key).await;
-
-                    // Simulate some DB operation
-                    let _ = resp.send(format!("Inserted"));
-                }
-                GetAverage { key, resp } => {
-                    // Handle GetAverage command
-                    println!("GetAverage received for key: {}", key);
-
-                    on_get_average(&db, key).await;
-
-                    // Simulate some DB operation
-                    let _ = resp.send(format!("GetAverage"));
-                }
-            }
-        }
-    });
-
-    Ok(tx)
+    Ok(db)
 }
 
-async fn on_insert(db: &DB, key: String) {
+pub async fn insert(db: &DB, key: String) {
     // TODO Hash to find the databases.
 
     let i = 0; // Hardcoded index, you would choose based on your logic
@@ -150,7 +55,7 @@ async fn on_insert(db: &DB, key: String) {
     }
 }
 
-async fn on_get_average(db: &DB, key: String) {
+pub async fn get_average(db: &DB, key: String) {
     // TODO Hash to find the databases.
 
     // Create a vector to store the receivers for each node
